@@ -16,8 +16,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/chat_app'  # Update for Render if using external MongoDB
-app.config['JWT_SECRET_KEY'] = 'your-secret-key'  # Replace with a secure key in production
+app.config['MONGO_URI'] = os.getenv('MONGO_URI', 'mongodb://localhost:27017/chat_app')  # Use environment variable for MongoDB URI
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')  # Use environment variable for JWT secret
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 mongo = PyMongo(app)
 jwt = JWTManager(app)
