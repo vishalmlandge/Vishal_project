@@ -8,9 +8,15 @@ import re
 from datetime import timedelta
 import pytz
 from toxic_model.detector import score_comment
+import os
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/chat_app'
+app.config['MONGO_URI'] = 'mongodb://localhost:27017/chat_app'  # Update for Render if using external MongoDB
 app.config['JWT_SECRET_KEY'] = 'your-secret-key'  # Replace with a secure key in production
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 mongo = PyMongo(app)
@@ -136,14 +142,14 @@ def get_contacts():
 @jwt_required()
 def chat(receiver_id):
     try:
-        print(f"Received request for /chat/{receiver_id} with method {request.method}")
-        print(f"Authorization header: {request.headers.get('Authorization')}")
+        logger.info(f"Received request for /chat/{receiver_id} with method {request.method}")
+        logger.info(f"Authorization header: {request.headers.get('Authorization')}")
         
         current_user_id = get_jwt_identity()
         try:
             receiver_id_obj = ObjectId(receiver_id)
         except Exception as e:
-            print(f"Invalid receiver ID: {str(e)}")
+            logger.error(f"Invalid receiver ID: {str(e)}")
             return jsonify({'error': 'Invalid receiver ID'}), 400
 
         if request.method == 'GET':
@@ -154,14 +160,14 @@ def chat(receiver_id):
                 ],
                 'deleted_for': {'$ne': ObjectId(current_user_id)}  # Exclude messages deleted for the current user
             }
-            print(f"Executing query: {query}")
+            logger.info(f"Executing query: {query}")
             messages = mongo.db.messages.find(query).sort('timestamp', 1)
             chat_history = []
             for msg in messages:
                 # Use score_comment function from detector.py for toxicity
                 toxicity = score_comment(msg['text'])
-                print(f"Message text: {msg['text']}, Timestamp: {msg['timestamp']}, Sender: {msg['sender_id']}")
-                print(f"Toxicity output: {toxicity}")
+                logger.info(f"Message text: {msg['text']}, Timestamp: {msg['timestamp']}, Sender: {msg['sender_id']}")
+                logger.info(f"Toxicity output: {toxicity}")
                 chat_history.append({
                     '_id': str(msg['_id']),  # Include MongoDB _id
                     'sender_id': str(msg['sender_id']),
@@ -169,7 +175,7 @@ def chat(receiver_id):
                     'timestamp': msg['timestamp'].isoformat(),
                     'toxicity': toxicity
                 })
-            print(f"Returning {len(chat_history)} messages")
+            logger.info(f"Returning {len(chat_history)} messages")
             return jsonify(chat_history), 200
         else:
             data = request.get_json()
@@ -179,8 +185,8 @@ def chat(receiver_id):
 
             # Use score_comment function from detector.py for toxicity
             toxicity = score_comment(text)
-            print(f"Sent message text: {text}")
-            print(f"Toxicity output: {toxicity}")
+            logger.info(f"Sent message text: {text}")
+            logger.info(f"Toxicity output: {toxicity}")
             utc_timezone = pytz.timezone('UTC')
             utc_timestamp = datetime.datetime.now(utc_timezone)
             message_doc = {
@@ -191,7 +197,7 @@ def chat(receiver_id):
                 'toxicity': toxicity,
                 'deleted_for': []  # Initialize deleted_for as an empty list
             }
-            print(f"Inserting message: {message_doc}")
+            logger.info(f"Inserting message: {message_doc}")
             result = mongo.db.messages.insert_one(message_doc)
             message_doc['_id'] = str(result.inserted_id)  # Include the inserted _id
             return jsonify({
@@ -201,7 +207,7 @@ def chat(receiver_id):
                 'timestamp': utc_timestamp.isoformat()
             }), 200
     except Exception as e:
-        print(f"Error in /chat endpoint: {str(e)}")
+        logger.error(f"Error in /chat endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/chat/<receiver_id>/message/<message_id>', methods=['DELETE'])
@@ -213,7 +219,7 @@ def delete_message(receiver_id, message_id):
             receiver_id_obj = ObjectId(receiver_id)
             message_id_obj = ObjectId(message_id)  # Convert message_id to ObjectId
         except Exception as e:
-            print(f"Invalid ID: {str(e)}")
+            logger.error(f"Invalid ID: {str(e)}")
             return jsonify({'error': 'Invalid ID'}), 400
 
         # Find the message by _id
@@ -255,8 +261,10 @@ def delete_message(receiver_id, message_id):
             return jsonify({'message': 'Message deleted for everyone'}), 200
 
     except Exception as e:
-        print(f"Error in /chat/{receiver_id}/message/{message_id} endpoint: {str(e)}")
+        logger.error(f"Error in /chat/{receiver_id}/message/{message_id} endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', 10000))  # Use Render's PORT or default to 10000
+    logger.info(f"Starting Flask app on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
