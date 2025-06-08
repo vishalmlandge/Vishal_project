@@ -11,7 +11,7 @@ from toxic_model.detector import score_comment
 import os  # Added for environment variables
 
 app = Flask(__name__)
-# Load MONGO_URI and JWT_SECRET_KEY from environment variables with fallbacks for local dev
+# Load configurations from environment variables with fallbacks for local dev
 app.config['MONGO_URI'] = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/chat_app')
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'your-secret-key')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
