@@ -1,0 +1,6 @@
+Flask==2.3.2
+Flask-PyMongo==2.3.0
+flask-jwt-extended==4.5.0
+bcrypt==4.0.1
+torch==2.0.1
+transformers==4.31.0

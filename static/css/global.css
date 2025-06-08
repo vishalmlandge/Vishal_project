@@ -1,0 +1,20 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+    color: #333;
+}
+
+a {
+    text-decoration: none;
+    color: #25D366;
+}
+
+a:hover {
+    text-decoration: underline;
+}
